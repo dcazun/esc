@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+src-tauri/target/
+detectors/dlib_detector/venv/
+detectors/dlib_detector/shape_predictor_68_face_landmarks.dat
+shape_predictor_68_face_landmarks.dat
