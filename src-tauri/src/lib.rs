@@ -1,4 +1,5 @@
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
+use std::io::{BufRead, BufReader};
 use std::sync::Mutex;
 use tauri::State;
 
@@ -14,15 +15,18 @@ const VENV_PYTHON: &str =
 const CAMERA_SCRIPT: &str =
     "/Users/snappy/projects/personal/esc/detectors/dlib_detector/camera.py";
 
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+// Represents the JSON contract between Python and React
+#[derive(serde::Serialize, serde::Deserialize)]
+struct DetectionResult {
+    distracted: bool,
+    confidence: f32,
 }
 
+// Spawns camera.py, waits for it to finish, reads the one JSON line it emits,
+// perses it, and returns the result to React as a serialized object.
 #[tauri::command]
-fn start_detector(state: State<DetectorState>) -> Result<String, String> {
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+fn start_detector(state: State<DetectorState>) -> Result<DetectionResult, String> {
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
 
     if guard.is_some() {
         return Err("Detector is already running.".into());
@@ -31,13 +35,29 @@ fn start_detector(state: State<DetectorState>) -> Result<String, String> {
     // For now, stdout/stderr inherit through to the terminal running
     // `npm run tauri dev` — we'll capture this into the app properly
     // once camera.py outputs structured JSON.
-    let child = Command::new(VENV_PYTHON)
+    let mut child = Command::new(VENV_PYTHON)
         .arg(CAMERA_SCRIPT)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit()) // debug print still goes to terminal
         .spawn()
         .map_err(|e| format!("Failed to start detector: {e}"))?;
+    
+    // Read out first line Python prints to stdout
+    let stdout = child.stdout.take()
+        .ok_or("Failed to capture stdout")?;
+    let mut reader = BufReader::new(stdout);
+    let mut line = String::new();
+    reader.read_line(&mut line)
+        .map_err(|e| format!("Failed to read detector output: {e}"))?;
+    
+    // Wait for process to fully exit
+    child.wait().map_err(|e| format!("Detector process error: {e}"))?;
 
-    *guard = Some(child);
-    Ok("Detector started.".into())
+    // Parse the JSON line into DetectionResult
+    let result: DetectionResult = serde_json::from_str(line.trim())
+        .map_err(|e| format!("Failed to parse detector output: {e}\nRaw: {line}"))?;
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -58,7 +78,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(DetectorState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![greet, start_detector, stop_detector])
+        .invoke_handler(tauri::generate_handler![start_detector, stop_detector])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
