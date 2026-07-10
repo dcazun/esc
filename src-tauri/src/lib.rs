@@ -1,7 +1,9 @@
 use std::process::{Child, Command, Stdio};
+use tauri_plugin_autostart::MacosLauncher;
 use std::io::{BufRead, BufReader};
 use std::sync::Mutex;
 use tauri::State;
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 // Holds the running detector process, if any.
 // Wrapped in a Mutex because Tauri commands can be called from multiple
@@ -61,6 +63,17 @@ fn start_detector(state: State<DetectorState>) -> Result<DetectionResult, String
 }
 
 #[tauri::command]
+fn start_detector_debug() -> Result<(), String> {
+    Command::new(VENV_PYTHON)
+        .arg(CAMERA_SCRIPT)
+        .arg("--debug")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 fn stop_detector(state: State<DetectorState>) -> Result<String, String> {
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
 
@@ -73,12 +86,48 @@ fn stop_detector(state: State<DetectorState>) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn show_nudge(app: tauri::AppHandle, confidence: f32) -> Result<(), String> {
+    let label = "nudge";
+
+    // Close existing nudge window if one's already open
+    if let Some(win) = app.get_webview_window(label) {
+        win.close().ok();
+    }
+
+    WebviewWindowBuilder::new(
+        &app,
+        label,
+        WebviewUrl::App(format!("nudge?confidence={confidence}").into())
+    )
+    .title("ESC")
+    .inner_size(320.0, 220.0)
+    .resizable(false)
+    .always_on_top(true)
+    .center()
+    .decorations(false)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn close_nudge(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("nudge") {
+        win.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None)) // autostart
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .manage(DetectorState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![start_detector, stop_detector])
+        .invoke_handler(tauri::generate_handler![start_detector, stop_detector, show_nudge, close_nudge])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

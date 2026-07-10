@@ -9,6 +9,8 @@ import os
 import sys
 from collections import deque
 
+debug = "--debug" in sys.argv
+
 class DoomscrollModule:
   def __init__(self):
     # we will try a series of face landmark detection, but for now, we will just use OpenCV or dlib
@@ -52,7 +54,7 @@ class DoomscrollModule:
     faces = self.detector(gray)
 
     for face in faces:
-      landmarks = self.predictor(gray, face)
+      landmarks = self.predictor(gray, face) 
 
       # Get key pts
       nose_tip = (landmarks.part(30).x, landmarks.part(30).y)
@@ -194,6 +196,16 @@ class DoomscrollModule:
 
       frame_time, score = self.detect_doomscroll_dlib(frame, gray)
 
+      # Will branch to different function if in DEBUGGING MODE
+      # so that the display shows with landmarks and face measurements...
+      if debug:
+        cv2.imshow("Doomscroll Detector", frame)
+        print("Debugging Mode...")
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+          break
+        continue
+
       if score is not None:
           self.score_window.append((curr_time, score))
 
@@ -218,46 +230,9 @@ class DoomscrollModule:
 
           print(json.dumps(result), flush=True)
           sys.exit(0)
-
-
-      """
-      # Detect scrolling
-      curr_time, score = self.detect_doomscroll_dlib(frame, gray)
-
-      # If no face is detected
-      if score is None:
-        continue
-
-      # Obtain 3 second sample of face posture
-      self.score_window.append((curr_time, score))
-      while (self.score_window and curr_time - self.score_window[0][0] > 3):
-        self.score_window.popleft()
-      
-      # Evaluate to JSON
-      if len(self.score_window) > 1:
-          oldest_time = self.score_window[0][0]
-          newest_time = self.score_window[-1][0]
-
-          if newest_time - oldest_time >= 3:
-              avg_score = (
-                  sum(window_score for _, window_score in self.score_window)
-                  / len(self.score_window)
-              )
-
-              confidence = avg_score / 6.0
-
-              is_doomscrolling = confidence >= 0.67
-
-              result = {
-                "distracted": is_doomscrolling, # returns doomscrolling result
-                "confidence": confidence
-              }
-
-              print(json.dumps(result), flush=True)
-              cap.release()
-              cv2.destroyAllWindows()
-              sys.exit(0)
-        """
+          
+    cap.release()
+    cv2.destroyAllWindows()
 
 def download_landmarks():
   import urllib.request

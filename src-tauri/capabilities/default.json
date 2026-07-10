@@ -4,7 +4,14 @@
   "description": "Capability for the main window",
   "windows": ["main"],
   "permissions": [
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
     "core:default",
-    "opener:default"
+    "opener:default",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load"
   ]
 }
