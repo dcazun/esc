@@ -1,9 +1,9 @@
-use std::process::{Child, Command, Stdio};
-use tauri_plugin_autostart::MacosLauncher;
 use std::io::{BufRead, BufReader};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::State;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_autostart::MacosLauncher;
 
 // Holds the running detector process, if any.
 // Wrapped in a Mutex because Tauri commands can be called from multiple
@@ -14,8 +14,7 @@ struct DetectorState(Mutex<Option<Child>>);
 // than one detector backend to choose between.
 const VENV_PYTHON: &str =
     "/Users/snappy/projects/personal/esc/detectors/dlib_detector/venv/bin/python3";
-const CAMERA_SCRIPT: &str =
-    "/Users/snappy/projects/personal/esc/detectors/dlib_detector/camera.py";
+const CAMERA_SCRIPT: &str = "/Users/snappy/projects/personal/esc/detectors/dlib_detector/camera.py";
 
 // Represents the JSON contract between Python and React
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -43,17 +42,19 @@ fn start_detector(state: State<DetectorState>) -> Result<DetectionResult, String
         .stderr(Stdio::inherit()) // debug print still goes to terminal
         .spawn()
         .map_err(|e| format!("Failed to start detector: {e}"))?;
-    
+
     // Read out first line Python prints to stdout
-    let stdout = child.stdout.take()
-        .ok_or("Failed to capture stdout")?;
+    let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let mut reader = BufReader::new(stdout);
     let mut line = String::new();
-    reader.read_line(&mut line)
+    reader
+        .read_line(&mut line)
         .map_err(|e| format!("Failed to read detector output: {e}"))?;
-    
+
     // Wait for process to fully exit
-    child.wait().map_err(|e| format!("Detector process error: {e}"))?;
+    child
+        .wait()
+        .map_err(|e| format!("Detector process error: {e}"))?;
 
     // Parse the JSON line into DetectionResult
     let result: DetectionResult = serde_json::from_str(line.trim())
@@ -79,7 +80,9 @@ fn stop_detector(state: State<DetectorState>) -> Result<String, String> {
 
     match guard.take() {
         Some(mut child) => {
-            child.kill().map_err(|e| format!("Failed to stop detector: {e}"))?;
+            child
+                .kill()
+                .map_err(|e| format!("Failed to stop detector: {e}"))?;
             Ok("Detector stopped.".into())
         }
         None => Err("Detector is not running.".into()),
@@ -98,7 +101,7 @@ fn show_nudge(app: tauri::AppHandle, confidence: f32) -> Result<(), String> {
     WebviewWindowBuilder::new(
         &app,
         label,
-        WebviewUrl::App(format!("nudge?confidence={confidence}").into())
+        WebviewUrl::App(format!("nudge?confidence={confidence}").into()),
     )
     .title("ESC")
     .inner_size(320.0, 220.0)
@@ -123,11 +126,19 @@ fn close_nudge(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None)) // autostart
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        )) // autostart
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .manage(DetectorState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![start_detector, stop_detector, show_nudge, close_nudge])
+        .invoke_handler(tauri::generate_handler![
+            start_detector,
+            stop_detector,
+            show_nudge,
+            close_nudge
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

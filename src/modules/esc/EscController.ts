@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { playPostureSound } from "./notifications/SoundNotifier";
 import type { DetectionResult, EscState } from "./types";
 
 type StateListener = (state: EscState) => void;
@@ -108,6 +109,7 @@ export class EscController {
             }%)`,
         });
 
+        await playPostureSound();
         await invoke("show_nudge", {
           confidence: result.confidence,
         });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { View } from "../Shell";
 import { load, Store } from "@tauri-apps/plugin-store";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import "./Settings.css";
 
 interface Props {
@@ -25,14 +26,20 @@ useEffect(() => {
     autoSave: true,
     defaults: DEFAULT_SETTINGS,
     }).then(async s => {
+
     setStore(s);
+
     const auto = await s.get<boolean>("automaticMode");
     const timer = await s.get<number>("checkInTimer");
-    const startup = await s.get<boolean>("runAtStartup");
 
+    try {
+      const startupEnabled = await isEnabled();
+      setRunAtStartup(startupEnabled);
+    } catch (error) {
+      console.error("Failed to read startup state:", error);
+    }
     if (auto !== null && auto !== undefined) setAutomaticMode(auto);
     if (timer !== null && timer !== undefined) setCheckInTimer(timer);
-    if (startup !== null && startup !== undefined) setRunAtStartup(startup);
   });
 }, []);
 
@@ -75,9 +82,21 @@ useEffect(() => {
           <input
             type="checkbox"
             checked={runAtStartup}
-            onChange={e => {
-              setRunAtStartup(e.target.checked);
-              saveSetting("runAtStartup", e.target.checked);
+            onChange={async (e) => {
+              const checked = e.target.checked;
+
+              try {
+                if (checked) {
+                  await enable();
+                } else {
+                  await disable();
+                }
+
+                setRunAtStartup(checked);
+                await saveSetting("runAtStartup", checked);
+              } catch (error) {
+                console.error("Failed to update startup setting:", error);
+              }
             }}
           />
         </div>
@@ -95,10 +114,11 @@ useEffect(() => {
               saveSetting("checkInTimer", val);
             }}
           >
+            <option value={1}>1 min</option>
             <option value={3}>3 min</option>
             <option value={5}>5 min</option>
             <option value={10}>10 min</option>
-            <option value={15}>Custom</option>
+            <option value={15}>15 min</option>
           </select>
         </div>
       </div>
