@@ -23,11 +23,7 @@ export function Settings({ onNavigate }: Props) {
 useEffect(() => {
   load("settings.json", { 
     autoSave: true,
-    defaults: {
-      automaticMode: DEFAULT_SETTINGS.automaticMode,
-      checkInTimer: DEFAULT_SETTINGS.checkInTimer,
-      runAtStartup: DEFAULT_SETTINGS.runAtStartup,
-    }
+    defaults: DEFAULT_SETTINGS,
     }).then(async s => {
     setStore(s);
     const auto = await s.get<boolean>("automaticMode");
