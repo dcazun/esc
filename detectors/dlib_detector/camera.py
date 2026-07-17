@@ -10,6 +10,12 @@ import sys
 from collections import deque
 
 debug = "--debug" in sys.argv
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MODEL_FILE = os.path.join(
+  SCRIPT_DIR,
+  "shape_predictor_68_face_landmarks.dat"
+)
 
 class DoomscrollModule:
   def __init__(self):
@@ -19,12 +25,11 @@ class DoomscrollModule:
       self.detector = dlib.get_frontal_face_detector()
 
       # See if landmark file exists:
-      model_file = "shape_predictor_68_face_landmarks.dat"
-      if not os.path.exists(model_file):
-          download_landmarks()
-          # Download from: http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+      if not os.path.exists(MODEL_FILE):
+        download_landmarks(MODEL_FILE)
 
-      self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+      self.predictor = dlib.shape_predictor(MODEL_FILE)
+
       print("Using dlib for face tracking", file = sys.stderr)
     except ImportError:
       print("dlib not found")
@@ -237,12 +242,11 @@ class DoomscrollModule:
 def download_landmarks():
   import urllib.request
   import bz2
-  import os
 
-  url = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
+  url = "https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
 
-  compressed_file = "shape_predictor_68_face_landmarks.dat.bz2"
   output_file = "shape_predictor_68_face_landmarks.dat"
+  compressed_file = output_file + ".bz2"
 
   print("Downloading landmark model...")
   urllib.request.urlretrieve(url, compressed_file)
