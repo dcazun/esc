@@ -110,6 +110,7 @@ export class EscController {
         });
 
         await playPostureSound();
+
         await invoke("show_nudge", {
           confidence: result.confidence,
         });
@@ -131,10 +132,13 @@ export class EscController {
         }
       }, 5000);
     } catch (error) {
-      await this.stop();
-
       this.updateState({
         error: String(error),
+        status: "Check-in failed. Will try again.",
+      });
+    } finally {
+      this.updateState({
+        isChecking: false,
       });
     }
   }
