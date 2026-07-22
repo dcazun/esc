@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { load } from "@tauri-apps/plugin-store";
+import { getDatabase } from "../database/Database";
 import {
   enable,
   disable,
@@ -23,6 +24,17 @@ function App() {
     window.location.pathname === "/nudge" ||
     window.location.search.includes("confidence");
 
+  
+  useEffect(() => {
+  void getDatabase()
+    .then(() => {
+      console.log("Database connected!");
+    })
+    .catch((error) => {
+      console.error("Database connection failed:", error);
+    });
+  }, []);
+  
   useEffect(() => {
     // Do not initialize monitoring from the separate nudge window.
     if (isNudge) {

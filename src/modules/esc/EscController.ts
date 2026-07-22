@@ -1,11 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
+import { saveSession } from "../../../database/repositories/SessionRepository";
 import { playPostureSound } from "./notifications/SoundNotifier";
-import type { DetectionResult, EscState } from "./types";
+import type { DetectionResult, EscState, Session } from "./types";
 
 type StateListener = (state: EscState) => void;
 
 export class EscController {
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  private currentSession: Session | null = null;
 
   private state: EscState = {
     isRunning: false,
@@ -42,10 +44,46 @@ export class EscController {
     return this.state;
   }
 
+  private startSession(): void {
+    const now = new Date();
+
+    // Start session
+    this.currentSession = {
+      id: crypto.randomUUID(),
+      date: now.toLocaleDateString("en-CA"),
+      startTime: now.toISOString(),
+      endTime: null,
+      lengthSeconds: null
+    };
+
+    console.log("Starting Session")
+  }
+
+  private endSession(): Session | null {
+    if (!this.currentSession) {
+      return null;
+    }
+
+    const now = new Date();
+    const start = new Date(this.currentSession.startTime);
+
+    this.currentSession.endTime = now.toISOString();
+    this.currentSession.lengthSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
+
+    const completedSession = this.currentSession;
+    console.log("Session ended:", this.currentSession)
+
+    this.currentSession = null;
+
+    return completedSession;
+  }
+
   async start(minutes: number): Promise<void> {
     if (this.state.isRunning) {
       return;
     }
+
+    this.startSession();
 
     this.updateState({
       isRunning: true,
@@ -62,6 +100,12 @@ export class EscController {
     if (this.intervalId !== null) {
       clearInterval(this.intervalId);
       this.intervalId = null;
+    }
+
+    // Calls API db to upload session
+    const completedSession = this.endSession();
+    if(completedSession) {
+      await saveSession(completedSession);
     }
 
     this.updateState({

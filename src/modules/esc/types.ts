@@ -9,3 +9,11 @@ export interface EscState {
   status: string;
   error: string;
 }
+
+export interface Session {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string | null;
+  lengthSeconds: number | null;
+}
