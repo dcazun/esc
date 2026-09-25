@@ -13,12 +13,14 @@ const DEFAULT_SETTINGS = {
   automaticMode: true,
   checkInTimer: 5,
   runAtStartup: true,
+  debugMode: false,
 };
 
 export function Settings({ onNavigate }: Props) {
   const [automaticMode, setAutomaticMode] = useState(DEFAULT_SETTINGS.automaticMode)
   const [checkInTimer, setCheckInTimer] = useState(DEFAULT_SETTINGS.checkInTimer)
   const [runAtStartup, setRunAtStartup] = useState(DEFAULT_SETTINGS.runAtStartup)
+  const [debugMode, setDebugMode] = useState(DEFAULT_SETTINGS.debugMode)
   const [store, setStore] = useState<Store | null>(null);
 
 useEffect(() => {
@@ -31,6 +33,7 @@ useEffect(() => {
 
     const auto = await s.get<boolean>("automaticMode");
     const timer = await s.get<number>("checkInTimer");
+    const debug = await s.get<boolean>("debugMode");
 
     try {
       const startupEnabled = await isEnabled();
@@ -40,6 +43,7 @@ useEffect(() => {
     }
     if (auto !== null && auto !== undefined) setAutomaticMode(auto);
     if (timer !== null && timer !== undefined) setCheckInTimer(timer);
+    if (debug !== null && debug !== undefined) setDebugMode(debug);
   });
 }, []);
 
@@ -120,6 +124,21 @@ useEffect(() => {
             <option value={10}>10 min</option>
             <option value={15}>15 min</option>
           </select>
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-label">
+            <span>Debug Mode</span>
+            <span className="settings-description">View landmarks and face/ratio parameters.</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={debugMode}
+            onChange={e => {
+              setDebugMode(e.target.checked);
+              saveSetting("debugMode", e.target.checked);
+            }}
+          />
         </div>
       </div>
 

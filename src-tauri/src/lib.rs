@@ -14,7 +14,7 @@ struct DetectorState(Mutex<Option<Child>>);
 // than one detector backend to choose between.
 const VENV_PYTHON: &str =
     "/Users/snappy/projects/personal/esc/detectors/dlib_detector/venv/bin/python3";
-const CAMERA_SCRIPT: &str = "/Users/snappy/projects/personal/esc/detectors/dlib_detector/camera.py";
+const CAMERA_SCRIPT: &str = "/Users/snappy/projects/personal/esc/detectors/dlib_detector/other_camera.py";
 
 // Represents the JSON contract between Python and React
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -70,7 +70,6 @@ fn start_detector_debug() -> Result<(), String> {
         .arg("--debug")
         .spawn()
         .map_err(|e| e.to_string())?;
-
     Ok(())
 }
 
@@ -141,9 +140,10 @@ pub fn run() {
         .manage(DetectorState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             start_detector,
+            start_detector_debug,
             stop_detector,
             show_nudge,
-            close_nudge
+            close_nudge,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

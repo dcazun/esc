@@ -129,6 +129,17 @@ export class EscController {
     }
   }
 
+  async runDebugMode(): Promise<void> {
+    try {
+      await invoke("start_detector_debug");
+    } catch (error) {
+      this.updateState({
+        error: String(error),
+        status: "Debug mode failed (sorry).",
+      });
+    }
+  }
+
   async runCheckIn(): Promise<void> {
     if (this.state.isChecking) {
       return;

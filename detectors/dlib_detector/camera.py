@@ -12,6 +12,12 @@ from collections import deque
 debug = "--debug" in sys.argv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+DETECTOR = "dlib"
+SUPPORTED_DETECTORS = {
+    "dlib",
+    "mediapipe",
+}
+
 MODEL_FILE = os.path.join(
   SCRIPT_DIR,
   "shape_predictor_68_face_landmarks.dat"
@@ -51,8 +57,6 @@ class DoomscrollModule:
 
     # Initialize score window to calculate and return confidence
     self.score_window = deque()
-
-
 
   def detect_doomscroll_dlib(self, frame, gray):
     """Detect doomscrolling using dlib landmarks"""

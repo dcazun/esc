@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   automaticMode: true,
   checkInTimer: 5,
   runAtStartup: true,
+  debugMode: false,
 };
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
           automaticMode: DEFAULT_SETTINGS.automaticMode,
           checkInTimer: DEFAULT_SETTINGS.checkInTimer,
           runAtStartup: DEFAULT_SETTINGS.runAtStartup,
+          debugMode: DEFAULT_SETTINGS.debugMode,
         },
       });
 
@@ -59,6 +61,9 @@ function App() {
 
       const runAtStartup =
         await store.get<boolean>("runAtStartup");
+      
+      const debugMode =
+        await store.get<boolean>("debugMode");
 
       /*
        * runAtStartup controls whether the operating system
@@ -77,6 +82,18 @@ function App() {
        * once the application itself has launched.
        */
       if (automaticMode === true) {
+        await escController.start(
+          checkInTimer ?? DEFAULT_SETTINGS.checkInTimer
+        );
+      }
+      /*
+       * debugMode controls whether the user can see the camera
+       * once the application itself has launched, which displays landmarks and
+       * measurements such as: 
+       */
+      if (debugMode === true) {
+        await escController.runDebugMode();
+      } else if (automaticMode === true) {
         await escController.start(
           checkInTimer ?? DEFAULT_SETTINGS.checkInTimer
         );
